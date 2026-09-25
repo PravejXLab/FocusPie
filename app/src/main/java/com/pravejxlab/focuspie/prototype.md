@@ -1,0 +1,28 @@
+```This is 48-hour sprint, where i will build very concrete and compressed version of my idea, it will be open source on GitHub, and deployable directly on mobile device.```
+
+### Setup flow --
+1. Write the small mind map portion and visualize.
+2. Writing the code by clarifying step through comments.
+3. Do research through process.
+4. Commit to GitHub, do a small test on mobile.
+
+### Lets setup repository.
+1. Create a GitHub project ```FocusPie```, and keep repository open source ✅.
+2. Make the project roadmap here and at last push to GitHub as first commit.
+
+### Full picture of app --
+1. User who launched the app is either student or host, if he is host, he will click on ```Host a table``` button.
+2. If he is student, he will click on ```Join a table``` button.
+3. They will pass through requested permissions and enable adapter pages.
+4. API here will find the devices and connect both once they confirm.
+5. Host will start the table, and 1-hour timer will start and will be shared in all user devices.
+6. If any user including host disconnects or closes the app, the timer will reset to zero immediately.
+7. If finishes successfully, they will be shown with ```Congratulations``` page.
+8. No database, no persistent, no fallback, if time available, enough good UI.
+9. Let's commit up to here and start the next sprint.
+
+### First 2 hours sprint target --
+1. Remove hostSettingScreen, it is adding complexity, hardcode 1 hour for now.
+2. Assume all permission are granted and permit manually from setting, also enable BT and Wi-Fi adapters manually.
+3. When host will click ```Host a table```, the host device will start broadcasting immediately.
+4. When user will click ```Join a table```, the user device will search for the table.
