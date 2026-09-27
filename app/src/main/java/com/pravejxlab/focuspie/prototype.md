@@ -22,7 +22,7 @@
 9. Let's commit up to here and start the next sprint.
 
 ### First 2 hours sprint target --
-1. Remove hostSettingScreen, it is adding complexity, hardcode 1 hour for now.
+1. Specify all required permissions in manifest file.
 2. Assume all permission are granted and permit manually from setting, also enable BT and Wi-Fi adapters manually.
 3. When host will click ```Host a table```, the host device will start broadcasting immediately.
 4. When user will click ```Join a table```, the user device will search for the table.

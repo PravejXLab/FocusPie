@@ -1,4 +1,4 @@
-package com.pravejxlab.focuspie
+package com.pravejxlab.focuspie.home
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
@@ -44,6 +44,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.pravejxlab.focuspie.FocusPieRoute
+import com.pravejxlab.focuspie.R
 import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.LocalDate
@@ -65,8 +67,8 @@ fun HomeScreen(
     ) { innerPadding ->
         HomePage(
             innerPadding = innerPadding,
-            onHostTableClicked = {},
-            onJoinGroupClicked = {}
+            onHostTableClicked = { navController.navigate(FocusPieRoute.HostTable) },
+            onJoinGroupClicked = { navController.navigate(FocusPieRoute.JoinTable) }
         )
     }
 }
@@ -104,7 +106,7 @@ private fun HomePage(
                 description = "Scan the room for active study groups.",
                 iconId = R.drawable.table,
                 containerColor = Color(0xFF60C765),
-                onClick = {}
+                onClick = onJoinGroupClicked
             )
         }
     }

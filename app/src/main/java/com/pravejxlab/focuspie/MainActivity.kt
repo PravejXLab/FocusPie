@@ -7,6 +7,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.pravejxlab.focuspie.home.HomeScreen
+import com.pravejxlab.focuspie.host_table.HostTableScreen
+import com.pravejxlab.focuspie.join_table.JoinTableScreen
 import com.pravejxlab.focuspie.ui.theme.FocusPieTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -22,6 +25,8 @@ class MainActivity : ComponentActivity() {
 
                 NavHost(navController, FocusPieRoute.Home) {
                     composable<FocusPieRoute.Home> { HomeScreen(navController) }
+                    composable<FocusPieRoute.HostTable> { HostTableScreen() }
+                    composable<FocusPieRoute.JoinTable> { JoinTableScreen() }
                 }
             }
         }

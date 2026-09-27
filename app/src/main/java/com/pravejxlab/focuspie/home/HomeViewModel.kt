@@ -1,4 +1,4 @@
-package com.pravejxlab.focuspie
+package com.pravejxlab.focuspie.home
 
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
