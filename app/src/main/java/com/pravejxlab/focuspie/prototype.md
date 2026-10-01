@@ -7,7 +7,7 @@
 4. Commit to GitHub, do a small test on mobile.
 
 ### Lets setup repository.
-1. Create a GitHub project ```FocusPie```, and keep repository open source ✅.
+1. Create a GitHub project ```FocusPie```, and keep repository open source.
 2. Make the project roadmap here and at last push to GitHub as first commit.
 
 ### Full picture of app --
@@ -21,8 +21,14 @@
 8. No database, no persistent, no fallback, if time available, enough good UI.
 9. Let's commit up to here and start the next sprint.
 
-### First 2 hours sprint target --
+### First 6 hours sprint target --
 1. Specify all required permissions in manifest file.
-2. Assume all permission are granted and permit manually from setting, also enable BT and Wi-Fi adapters manually.
+2. Assume all permission are granted and permit manually from setting, also enable BT, Wi-Fi and Location adapters manually.
 3. When host will click ```Host a table```, the host device will start broadcasting immediately.
 4. When user will click ```Join a table```, the user device will search for the table.
+
+### Second 6 hours sprint target --
+1. Improve the status, it is always connected, correct it to real status. Make sure to have payload setup as well.
+2. Start the timer button in host screen, clicking will move to study page.
+3. Timer is hardcoded to 1 hour this time, startTime will be stored in host viewModel, and shared to others via payload.
+<br>

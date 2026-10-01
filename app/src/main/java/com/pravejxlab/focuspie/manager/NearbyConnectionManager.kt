@@ -11,20 +11,27 @@ import com.google.android.gms.nearby.connection.ConnectionsStatusCodes
 import com.google.android.gms.nearby.connection.DiscoveredEndpointInfo
 import com.google.android.gms.nearby.connection.DiscoveryOptions
 import com.google.android.gms.nearby.connection.EndpointDiscoveryCallback
+import com.google.android.gms.nearby.connection.Payload
+import com.google.android.gms.nearby.connection.PayloadCallback
+import com.google.android.gms.nearby.connection.PayloadTransferUpdate
 import com.google.android.gms.nearby.connection.Strategy
-import com.pravejxlab.focuspie.join_table.StudentInfo
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.seconds
 
 class NearbyConnectionManager @Inject constructor(
     private val client: ConnectionsClient
 ) {
-    private val connectedEndpoints = mutableSetOf<EndpointInfo>()
-    private val availableTables = mutableSetOf<EndpointInfo>()
+    private val _connectedEndpoints = MutableStateFlow(setOf<EndpointInfo>())
+    val connectedEndpoints = _connectedEndpoints.asStateFlow()
+
+    private val _availableTables = MutableStateFlow(setOf<EndpointInfo>())
+    val availableTables = _availableTables.asStateFlow()
 
     private val _connectionState = MutableStateFlow<ConnectionState>(ConnectionState.Awaiting)
     val connectionState = _connectionState.asStateFlow()
@@ -32,23 +39,44 @@ class NearbyConnectionManager @Inject constructor(
     private val _endpointState = MutableStateFlow<EndpointState>(EndpointState.Awaiting)
     val endpointState = _endpointState.asStateFlow()
 
+    private val _payloadState = MutableStateFlow<PayloadState>(PayloadState.Awaiting)
+    val payloadState = _payloadState.asStateFlow()
+
     val connectionLifecycleCallback = object : ConnectionLifecycleCallback() {
 
         override fun onConnectionInitiated(endpointId: String, info: ConnectionInfo) {
             Log.i(TAG, "onConnectionInitiated: Connection initiated with endpoint Id - $endpointId")
 
-            connectedEndpoints.add(EndpointInfo(endpointId, info.endpointName))
+            _connectedEndpoints.update { it + EndpointInfo(endpointId, info.endpointName, Status.Awaiting) }
             _connectionState.value = ConnectionState.Initiated(endpointId, info.endpointName, info.authenticationDigits)
         }
 
         override fun onConnectionResult(endpointId: String, resolution: ConnectionResolution) {
             Log.i(TAG, "onConnectionResult: Connection result arrived for $endpointId")
 
+            val itemToUpdate = _connectedEndpoints.value.first { it.endpointId == endpointId }
+
             _connectionState.value = when(resolution.status.statusCode) {
-                ConnectionResult.SUCCESS -> ConnectionState.Connected(connectedEndpoints.toList())
+                ConnectionResult.SUCCESS -> {
+                    _connectedEndpoints.update { it - itemToUpdate }
+                    _connectedEndpoints.update { it + itemToUpdate.copy(status = Status.Connected) }
+
+                    ConnectionState.Connected(_connectedEndpoints.value.toList())
+                }
+
+                ConnectionsStatusCodes.STATUS_ALREADY_CONNECTED_TO_ENDPOINT -> {
+                    ConnectionState.Connected(_connectedEndpoints.value.toList())
+                }
+
+                ConnectionResult.CANCELED -> {
+                    _connectedEndpoints.update { it - itemToUpdate }
+                    _connectedEndpoints.update { it + itemToUpdate.copy(status = Status.Denied) }
+
+                    ConnectionState.Connected(_connectedEndpoints.value.toList())
+                }
                 else -> {
-                    connectedEndpoints.remove(connectedEndpoints.first { it.endpointId == endpointId })
-                    ConnectionState.Connected(connectedEndpoints.toList())
+                    _connectedEndpoints.update { it - itemToUpdate }
+                    ConnectionState.Connected(_connectedEndpoints.value.toList())
                 }
             }
         }
@@ -56,8 +84,8 @@ class NearbyConnectionManager @Inject constructor(
         override fun onDisconnected(endpointId: String) {
             Log.i(TAG, "onDisconnected: Connection dropped - $endpointId")
 
-            connectedEndpoints.remove(connectedEndpoints.first { it.endpointId == endpointId })
-            ConnectionState.Connected(connectedEndpoints.toList())
+            _connectedEndpoints.update { endpoints -> endpoints - endpoints.first { it.endpointId == endpointId } }
+            ConnectionState.Connected(_connectedEndpoints.value.toList())
         }
     }
 
@@ -66,15 +94,43 @@ class NearbyConnectionManager @Inject constructor(
         override fun onEndpointFound(endpointId: String, info: DiscoveredEndpointInfo) {
             Log.i(TAG, "onEndpointFound: Endpoint found - $endpointId")
 
-            availableTables.add(EndpointInfo(endpointId, info.endpointName))
-            _endpointState.value = EndpointState.AvailableEndpoints(availableTables.toList())
+            _availableTables.update { it + EndpointInfo(endpointId, info.endpointName, Status.None) }
+            _endpointState.value = EndpointState.AvailableEndpoints(_availableTables.value.toList())
         }
 
         override fun onEndpointLost(endpointId: String) {
             Log.i(TAG, "onEndpointLost: Endpoint lost - $endpointId")
 
-            availableTables.remove(availableTables.first { it.endpointId == endpointId })
-            _endpointState.value = EndpointState.AvailableEndpoints(availableTables.toList())
+            _availableTables.update { tables -> tables - _availableTables.value.first { it.endpointId == endpointId } }
+            _endpointState.value = EndpointState.AvailableEndpoints(availableTables.value.toList())
+        }
+    }
+
+    val payloadCallback = object : PayloadCallback() {
+
+        override fun onPayloadReceived(endpointId: String, payload: Payload) {
+            Log.i(TAG, "onPayloadReceived: Received payload is - $payload")
+
+            if (payload.type == Payload.Type.BYTES) {
+                val receivedBytes = payload.asBytes() ?: return
+
+                val jsonString = String(receivedBytes, Charsets.UTF_8)
+
+                try {
+                    val receivedState = Json.decodeFromString<PayloadType>(jsonString)
+                    _payloadState.value = PayloadState.Received(receivedState)
+                } catch (e: Exception) {
+                    Log.e(TAG, "onPayloadReceived: ${e.message}", e)
+                }
+            }
+        }
+
+        override fun onPayloadTransferUpdate(endpointId: String, update: PayloadTransferUpdate) {
+            when(update.status) {
+                PayloadTransferUpdate.Status.SUCCESS -> {
+                    Log.i(TAG, "onPayloadTransferUpdate: Transfer successfully to - $endpointId")
+                }
+            }
         }
     }
 
@@ -108,13 +164,43 @@ class NearbyConnectionManager @Inject constructor(
     }
 
     suspend fun acceptConnection(endpointId: String) {
-        // Hold on here, because it requires payload callback.
+        Log.i(TAG, "acceptConnection: Accepting connection...")
+        client.acceptConnection(endpointId, payloadCallback).await()
+        Log.i(TAG, "acceptConnection: Connection accepted with - $endpointId")
     }
 
     suspend fun rejectConnection(endpointId: String) {
-        Log.i(TAG, "rejectConnection: Rejecting the connection process with - $endpointId")
+        Log.i(TAG, "rejectConnection: Rejecting the connection process...")
         client.rejectConnection(endpointId).await()
         Log.i(TAG, "rejectConnection: Connection rejected successfully with - $endpointId")
+    }
+
+    suspend fun broadcastStudyHasStarted() {
+        val availableEndpointsId = if (_connectionState.value is ConnectionState.Connected) {
+            (_connectionState.value as ConnectionState.Connected).endpoints.map { it.endpointId }
+        } else null
+
+        if (availableEndpointsId.isNullOrEmpty()) return
+        val jsonString = Json.encodeToString<PayloadType>(PayloadType.StartTimeBroadcast)
+        val payload = Payload.fromBytes(jsonString.toByteArray())
+
+        client.sendPayload(availableEndpointsId, payload).await()
+        _payloadState.value = PayloadState.Sent(PayloadType.StartTimeBroadcast)
+        Log.i(TAG, "broadcastStudyHasStarted: Payload sent to all devices - $availableEndpointsId")
+    }
+
+    suspend fun triggerStartStudy(startTime: Long) {
+        val availableEndpoints = if (_connectionState.value is ConnectionState.Connected) {
+            (_connectionState.value as ConnectionState.Connected).endpoints.map { it.endpointId }
+        } else null
+
+        val jsonString = Json.encodeToString<PayloadType>(PayloadType.TriggerStartStudy(startTime))
+        val payload = Payload.fromBytes(jsonString.toByteArray())
+
+        if (availableEndpoints.isNullOrEmpty()) return
+        client.sendPayload(availableEndpoints, payload).await()
+        _payloadState.value = PayloadState.Sent(PayloadType.TriggerStartStudy(startTime))
+        Log.i(TAG, "triggerStartStudy: Payload $payload sent to - $availableEndpoints")
     }
 
     fun stopAdvertisement() {

@@ -5,8 +5,11 @@ import androidx.lifecycle.viewModelScope
 import com.pravejxlab.focuspie.manager.ConnectionState
 import com.pravejxlab.focuspie.manager.EndpointState
 import com.pravejxlab.focuspie.manager.NearbyConnectionManager
+import com.pravejxlab.focuspie.manager.PayloadState
+import com.pravejxlab.focuspie.manager.PayloadType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -44,6 +47,8 @@ class JoinTableViewModel @Inject constructor(
         startDiscovery()
     }
 
+    val payloadState = manager.payloadState
+
     fun startDiscovery() = viewModelScope.launch {
         manager.startDiscovery()
     }
@@ -54,6 +59,10 @@ class JoinTableViewModel @Inject constructor(
 
     fun denyConnection(id: String) = viewModelScope.launch {
         manager.rejectConnection(id)
+    }
+
+    fun acceptConnection(id: String) = viewModelScope.launch {
+        manager.acceptConnection(id)
     }
 
     override fun onCleared() {

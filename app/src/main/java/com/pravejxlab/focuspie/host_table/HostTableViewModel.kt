@@ -30,6 +30,8 @@ class HostTableViewModel @Inject constructor(
         initialValue = AdvertisementState.Awaiting
     )
 
+    val payloadState = manager.payloadState
+
     init {
         startAdvertising()
     }
@@ -40,6 +42,14 @@ class HostTableViewModel @Inject constructor(
 
     fun denyConnection(id: String) = viewModelScope.launch {
         manager.rejectConnection(id)
+    }
+
+    fun acceptConnection(id: String) = viewModelScope.launch {
+        manager.acceptConnection(id)
+    }
+
+    fun startStudy() = viewModelScope.launch {
+        manager.broadcastStudyHasStarted()
     }
 
     override fun onCleared() {

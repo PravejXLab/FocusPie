@@ -30,6 +30,7 @@ import com.pravejxlab.focuspie.R
 
 import com.pravejxlab.focuspie.home.google_sans_font
 import com.pravejxlab.focuspie.manager.EndpointInfo
+import com.pravejxlab.focuspie.manager.Status
 
 sealed class DiscoveryState {
     object Awaiting : DiscoveryState()
@@ -42,12 +43,18 @@ sealed class AdvertisementState {
     data class Connected(val connectedStudents: List<StudentInfo>) : DiscoveryState()
 }
 
+sealed class DataTransferState {
+    object Awaiting : DataTransferState()
+    object Sent : DataTransferState()
+    data class Received(val data: String) : DataTransferState()
+}
+
 data class StudentInfo(
     val id: String,
     val name: String
 )
 
-fun List<EndpointInfo>.toTablesInfo() = map { TableInfo(it.endpointId, it.endpointName, "Connected") }
+fun List<EndpointInfo>.toTablesInfo() = map { TableInfo(it.endpointId, it.endpointName, if (it.status == Status.None) "" else it.status.name) }
 fun List<EndpointInfo>.toStudentsInfo() = map { StudentInfo(it.endpointId, it.endpointName) }
 
 data class TableInfo(

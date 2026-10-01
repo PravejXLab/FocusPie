@@ -22,6 +22,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,16 +33,32 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation.NavController
+import com.pravejxlab.focuspie.FocusPieRoute
 import com.pravejxlab.focuspie.R
 import com.pravejxlab.focuspie.home.google_sans_font
+import com.pravejxlab.focuspie.manager.PayloadState
+import com.pravejxlab.focuspie.manager.PayloadType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun JoinTableScreen(
+    navController: NavController,
     viewModel: JoinTableViewModel = hiltViewModel()
 ) {
     val discoveryState by viewModel.discoveryState.collectAsStateWithLifecycle()
     val advertisementState by viewModel.advertisementState.collectAsStateWithLifecycle()
+    val payloadState by viewModel.payloadState.collectAsStateWithLifecycle()
+
+    LaunchedEffect(payloadState) {
+        if (payloadState is PayloadState.Received) {
+            val payloadType = (payloadState as PayloadState.Received).payloadType
+
+            if (payloadType is PayloadType.StartTimeBroadcast) {
+                navController.navigate(FocusPieRoute.StudentLiveStudy)
+            }
+        }
+    }
 
     if (advertisementState is AdvertisementState.Initiated) {
         ModalBottomSheet(
@@ -52,7 +69,7 @@ fun JoinTableScreen(
                 tableName = (advertisementState as AdvertisementState.Initiated).name,
                 authDigits = (advertisementState as AdvertisementState.Initiated).authDigits,
                 denyConnection = { viewModel.denyConnection((advertisementState as AdvertisementState.Initiated).id) },
-                acceptConnection = {}
+                acceptConnection = { viewModel.acceptConnection((advertisementState as AdvertisementState.Initiated).id) }
             )
         }
     }
@@ -113,14 +130,14 @@ fun AvailableTablesSegment(
             .fillMaxWidth()
             .padding(16.dp)
     ) {
-        items(availableTables) { student ->
+        items(availableTables) { table ->
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 16.dp)
                     .clip(RoundedCornerShape(100))
                     .background(color = colorResource(R.color.extra_light_green))
-                    .clickable { onTableClicked(student.id) }
+                    .clickable { onTableClicked(table.id) }
             ) {
                 Row(
                     modifier = Modifier
@@ -130,12 +147,12 @@ fun AvailableTablesSegment(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = student.name,
+                        text = table.name,
                         fontFamily = google_sans_font
                     )
 
                     Text(
-                        text = student.status,
+                        text = table.status,
                         fontFamily = google_sans_font
                     )
                 }
