@@ -16,7 +16,7 @@ data class EndpointInfo(
 sealed class ConnectionState {
     object Awaiting : ConnectionState()
     data class Initiated(val endpointId: String, val endpointName: String, val authDigits: String) : ConnectionState()
-    data class Connected(val endpoints: List<EndpointInfo>) : ConnectionState()
+    object Connected : ConnectionState()
 }
 
 sealed class PayloadState {
@@ -37,12 +37,12 @@ sealed class PayloadType {
     data class Distracted(val endpointName: String) : PayloadType()
 
     @Serializable
-    data class Disconnected(val endpointName: String) : PayloadType()
+    data class Disconnected(val endpointId: String) : PayloadType()
 
     @Serializable
     data class LiveNow(val endpointName: String) : PayloadType()
 }
 
 enum class Status {
-    Awaiting, Connected, Denied, None
+    Awaiting, Connected, Denied, None, Disconnected
 }

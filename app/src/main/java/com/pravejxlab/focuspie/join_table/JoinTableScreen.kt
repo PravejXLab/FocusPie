@@ -46,7 +46,6 @@ fun JoinTableScreen(
     navController: NavController,
     viewModel: JoinTableViewModel = hiltViewModel()
 ) {
-    val discoveryState by viewModel.discoveryState.collectAsStateWithLifecycle()
     val advertisementState by viewModel.advertisementState.collectAsStateWithLifecycle()
     val payloadState by viewModel.payloadState.collectAsStateWithLifecycle()
 
@@ -77,9 +76,7 @@ fun JoinTableScreen(
     Scaffold { innerPadding ->
         JoinTablePage(
             innerPadding = innerPadding,
-            availableTables = if (discoveryState is DiscoveryState.AvailableTables) {
-                (discoveryState as DiscoveryState.AvailableTables).tables
-            } else emptyList(),
+            availableTables = viewModel.availableTables,
             onTableClicked = { viewModel.requestConnection(it) }
         )
     }

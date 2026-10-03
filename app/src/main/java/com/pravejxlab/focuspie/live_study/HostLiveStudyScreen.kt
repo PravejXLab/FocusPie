@@ -11,13 +11,12 @@ fun HostLiveStudyScreen(
     viewModel: HostLiveStudyViewModel = hiltViewModel()
 ) {
     val timeLeft by viewModel.timeLeft.collectAsStateWithLifecycle()
-    val connectedStudents by viewModel.connectedStudents.collectAsStateWithLifecycle()
 
     Scaffold { innerPadding ->
         LiveStudyPage(
             innerPadding = innerPadding,
             timeLeft = timeLeft,
-            studyingStudents = connectedStudents
+            studyingStudents = viewModel.connectedStudents
         )
     }
 }

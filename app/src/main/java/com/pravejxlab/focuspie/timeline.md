@@ -31,4 +31,9 @@
 1. Improve the status, it is always connected, correct it to real status. Make sure to have payload setup as well.
 2. Start the timer button in host screen, clicking will move to study page.
 3. Timer is hardcoded to 1 hour this time, startTime will be stored in host viewModel, and shared to others via payload.
+
+# Third 6 hours sprint target -- 
+1. Start the timer, it should decrease each second and should be same logically. 
+2. if any student leaves or disconnect, timer will reset to 0 hour immediately.
+3. Rewrite NearbyConnectionManager, it should be separate for logical and separation clarity.
 <br>

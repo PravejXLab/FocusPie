@@ -80,9 +80,7 @@ fun HostTableScreen(
     Scaffold { innerPadding ->
         HostTablePage(
             innerPadding = innerPadding,
-            connectedStudents = if (advertisementState is AdvertisementState.Connected) {
-                (advertisementState as AdvertisementState.Connected).connectedStudents
-            } else emptyList(),
+            connectedStudents = viewModel.connectedStudents,
             onStartStudyButtonClicked = { viewModel.startStudy() }
         )
     }

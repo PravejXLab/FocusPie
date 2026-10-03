@@ -40,7 +40,7 @@ sealed class DiscoveryState {
 sealed class AdvertisementState {
     object Awaiting : DiscoveryState()
     data class Initiated(val id: String, val name: String, val authDigits: String) : DiscoveryState()
-    data class Connected(val connectedStudents: List<StudentInfo>) : DiscoveryState()
+    object Connected : DiscoveryState()
 }
 
 sealed class DataTransferState {
@@ -54,8 +54,8 @@ data class StudentInfo(
     val name: String
 )
 
-fun List<EndpointInfo>.toTablesInfo() = map { TableInfo(it.endpointId, it.endpointName, if (it.status == Status.None) "" else it.status.name) }
-fun List<EndpointInfo>.toStudentsInfo() = map { StudentInfo(it.endpointId, it.endpointName) }
+fun Collection<EndpointInfo>.toTablesInfo() = map { TableInfo(it.endpointId, it.endpointName, if (it.status == Status.None) "" else it.status.name) }
+fun Collection<EndpointInfo>.toStudentsInfo() = map { StudentInfo(it.endpointId, it.endpointName) }
 
 data class TableInfo(
     val id: String,

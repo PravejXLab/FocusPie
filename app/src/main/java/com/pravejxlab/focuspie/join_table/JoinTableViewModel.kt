@@ -3,10 +3,7 @@ package com.pravejxlab.focuspie.join_table
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pravejxlab.focuspie.manager.ConnectionState
-import com.pravejxlab.focuspie.manager.EndpointState
-import com.pravejxlab.focuspie.manager.NearbyConnectionManager
-import com.pravejxlab.focuspie.manager.PayloadState
-import com.pravejxlab.focuspie.manager.PayloadType
+import com.pravejxlab.focuspie.manager.StudentNearbyConnectionManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.collectLatest
@@ -17,25 +14,24 @@ import javax.inject.Inject
 
 @HiltViewModel
 class JoinTableViewModel @Inject constructor(
-    private val manager: NearbyConnectionManager
+    private val manager: StudentNearbyConnectionManager
 ) : ViewModel() {
 
-    val discoveryState = manager.endpointState.map { state ->
-        when(state) {
-            is EndpointState.Awaiting -> DiscoveryState.Awaiting
-            is EndpointState.AvailableEndpoints -> DiscoveryState.AvailableTables(state.endpoints.toTablesInfo())
+    var availableTables = listOf<TableInfo>()
+
+    init {
+        viewModelScope.launch {
+            manager.availableEndpoints.collectLatest { endpoints ->
+                availableTables = endpoints.values.toTablesInfo()
+            }
         }
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = DiscoveryState.Awaiting
-    )
+    }
 
     val advertisementState = manager.connectionState.map { state ->
         when(state) {
             is ConnectionState.Awaiting -> AdvertisementState.Awaiting
             is ConnectionState.Initiated -> AdvertisementState.Initiated(state.endpointId, state.endpointName, state.authDigits)
-            is ConnectionState.Connected -> AdvertisementState.Connected(state.endpoints.toStudentsInfo())
+            is ConnectionState.Connected -> AdvertisementState.Connected
         }
     }.stateIn(
         scope = viewModelScope,

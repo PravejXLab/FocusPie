@@ -3,51 +3,47 @@ package com.pravejxlab.focuspie.live_study
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.pravejxlab.focuspie.join_table.StudentInfo
-import com.pravejxlab.focuspie.manager.NearbyConnectionManager
+import com.pravejxlab.focuspie.join_table.toStudentsInfo
+import com.pravejxlab.focuspie.manager.HostNearbyConnectionManager
 import com.pravejxlab.focuspie.manager.PayloadState
 import com.pravejxlab.focuspie.manager.PayloadType
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import kotlin.time.Duration.Companion.milliseconds
 
 @HiltViewModel
 class HostLiveStudyViewModel @Inject constructor(
-    private val manager: NearbyConnectionManager
+    private val manager: HostNearbyConnectionManager
 ) : ViewModel() {
 
     private val _timeLeft = MutableStateFlow(36_00_000L) // 60 minutes
     val timeLeft = _timeLeft.asStateFlow()
 
-    val connectedStudents = manager.connectedEndpoints.map { endpoints ->
-        endpoints.map { (endpointId, endpointName, status) ->
-            StudentInfo(
-                id = endpointId,
-                name = endpointName
-            )
-        }
-    }.stateIn(
-        scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000),
-        initialValue = emptyList()
-    )
+    var connectedStudents = listOf<StudentInfo>()
+        private set
 
     init {
         viewModelScope.launch {
-            manager.triggerStartStudy(System.currentTimeMillis())
+            manager.connectedEndpoints.collectLatest { endpoints ->
+                connectedStudents = endpoints.values.toStudentsInfo()
+            }
+        }
+    }
+
+    init {
+        viewModelScope.launch {
+            manager.triggerStartStudy()
         }
     }
 
     fun calculateTimeLeft(startTime: Long) = viewModelScope.launch {
-        while (true) {
-            _timeLeft.value = System.currentTimeMillis() - startTime
+        while (_timeLeft.value > 0) {
+            _timeLeft.value = 36_00_000L - (System.currentTimeMillis() - startTime)
             delay(500.milliseconds)
         }
     }
@@ -60,6 +56,10 @@ class HostLiveStudyViewModel @Inject constructor(
 
                     if (type is PayloadType.TriggerStartStudy) {
                         calculateTimeLeft(type.startTime)
+                    }
+
+                    if (type is PayloadType.Disconnected) {
+                        _timeLeft.value = 0
                     }
                 }
             }
