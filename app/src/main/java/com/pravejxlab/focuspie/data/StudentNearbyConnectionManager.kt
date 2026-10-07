@@ -1,5 +1,6 @@
-package com.pravejxlab.focuspie.manager
+package com.pravejxlab.focuspie.data
 
+import android.os.Build
 import android.util.Log
 import com.google.android.gms.nearby.connection.ConnectionInfo
 import com.google.android.gms.nearby.connection.ConnectionLifecycleCallback
@@ -13,12 +14,21 @@ import com.google.android.gms.nearby.connection.Payload
 import com.google.android.gms.nearby.connection.PayloadCallback
 import com.google.android.gms.nearby.connection.PayloadTransferUpdate
 import com.google.android.gms.nearby.connection.Strategy
+import com.pravejxlab.focuspie.domain.ConnectionState
+import com.pravejxlab.focuspie.domain.EndpointInfo
+import com.pravejxlab.focuspie.domain.PayloadState
+import com.pravejxlab.focuspie.domain.PayloadType
+import com.pravejxlab.focuspie.domain.Status
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeout
-import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.util.UUID
 import javax.inject.Inject
@@ -29,6 +39,8 @@ import kotlin.time.Duration.Companion.seconds
 class StudentNearbyConnectionManager @Inject constructor(
     private val client: ConnectionsClient
 ) {
+    val scope = CoroutineScope(Dispatchers.Main)
+
     private val _availableEndpoints = MutableStateFlow<Map<String, EndpointInfo>>(emptyMap())
     val availableEndpoints = _availableEndpoints.asStateFlow()
 
@@ -38,12 +50,21 @@ class StudentNearbyConnectionManager @Inject constructor(
     private val _payloadState = MutableStateFlow<PayloadState>(PayloadState.Awaiting)
     val payloadState = _payloadState.asStateFlow()
 
+    init {
+        scope.launch {
+            _availableEndpoints.collectLatest { endpoints ->
+                Log.i(TAG, "Endpoints: $endpoints")
+            }
+        }
+    }
+
     private val connectionLifecycleCallback = object : ConnectionLifecycleCallback() {
 
         override fun onConnectionInitiated(endpointId: String, info: ConnectionInfo) {
             Log.i(TAG, "onConnectionInitiated: Connection initiated with endpoint Id - $endpointId")
 
-            _connectionState.value = ConnectionState.Initiated(endpointId, info.endpointName, info.authenticationDigits)
+            val name = info.endpointName.split(SPLITTER).last()
+            _connectionState.value = ConnectionState.Initiated(endpointId, name, info.authenticationDigits)
         }
 
         override fun onConnectionResult(endpointId: String, resolution: ConnectionResolution) {
@@ -52,17 +73,21 @@ class StudentNearbyConnectionManager @Inject constructor(
 
             when(resolution.status.statusCode) {
                 ConnectionsStatusCodes.STATUS_OK -> {
-                    _availableEndpoints.update { it + (uuid to endpointToUpdate.copy(status = Status.Connected)) }
-                }
+                    val connectedHost = _availableEndpoints.value.filter { it.value.status == Status.Connected }
+                    if (connectedHost.isNotEmpty()) client.disconnectFromEndpoint(connectedHost.values.first().endpointId)
 
-                ConnectionsStatusCodes.STATUS_ALREADY_CONNECTED_TO_ENDPOINT -> {}
+                    _availableEndpoints.update { it + (uuid to endpointToUpdate.copy(status = Status.Connected)) }
+                    _connectionState.value = ConnectionState.Connected
+                }
 
                 ConnectionsStatusCodes.STATUS_CONNECTION_REJECTED -> {
                     _availableEndpoints.update { it + (uuid to endpointToUpdate.copy(status = Status.Denied)) }
+                    _connectionState.value = ConnectionState.Connected
                 }
 
                 else -> {
                     _availableEndpoints.update { it + (uuid to endpointToUpdate.copy(status = Status.None)) }
+                    _connectionState.value = ConnectionState.Connected
                 }
             }
         }
@@ -73,7 +98,7 @@ class StudentNearbyConnectionManager @Inject constructor(
             val uuid = _availableEndpoints.value.entries.find { it.value.endpointId == endpointId }?.key ?: return
             val endpointToUpdate = _availableEndpoints.value[uuid] ?: return
 
-            _availableEndpoints.update { it + (uuid to endpointToUpdate.copy(status = Status.None)) }
+            _availableEndpoints.update { it + (uuid to endpointToUpdate.copy(status = Status.Disconnected)) }
         }
     }
 
@@ -107,6 +132,7 @@ class StudentNearbyConnectionManager @Inject constructor(
                 try {
                     val data = Json.decodeFromString<PayloadType>(jsonString)
                     _payloadState.value = PayloadState.Received(data)
+                    Log.i(TAG, "onPayloadReceived: $data")
                 } catch (e: Exception) {
                     Log.e(TAG, "onPayloadReceived: ${e.message}", e)
                 }
@@ -148,13 +174,25 @@ class StudentNearbyConnectionManager @Inject constructor(
         client.acceptConnection(endpointId, payloadCallback).await()
     }
 
+    suspend fun triggerDistracted(endpointId: String?, endpointName: String) {
+        if (endpointId.isNullOrBlank()) return
+
+        val data = PayloadType.Distracted(endpointName)
+        val jsonString = Json.encodeToString<PayloadType>(data)
+        val payload = Payload.fromBytes(jsonString.toByteArray())
+
+        client.sendPayload(endpointId, payload).await()
+        _payloadState.value = PayloadState.Sent(PayloadType.Distracted(endpointName))
+    }
+
     fun stopDiscovery() = client.stopDiscovery()
+    fun destroyConnection() = client.stopAllEndpoints()
 
 
     companion object {
         private val TAG = StudentNearbyConnectionManager::class.simpleName
         private val uuid = UUID.randomUUID().toString()
-        private val deviceName = android.os.Build.MODEL.let { if (it.isNullOrBlank()) "Unknown" else it }
+        private val deviceName = Build.MODEL.let { if (it.isNullOrBlank()) "Unknown" else it }
         private const val SPLITTER = "|<..x|-->"
 
         private val userData = "$uuid$SPLITTER$deviceName"

@@ -17,5 +17,8 @@ sealed class FocusPieRoute {
     object HostLiveStudy : FocusPieRoute()
 
     @Serializable
-    object StudentLiveStudy
+    object StudentLiveStudy : FocusPieRoute()
+
+    @Serializable
+    data class Appreciation(val timeLeft: Long) : FocusPieRoute()
 }

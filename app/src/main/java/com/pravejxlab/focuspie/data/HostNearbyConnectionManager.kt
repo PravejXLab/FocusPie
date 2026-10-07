@@ -1,24 +1,30 @@
-package com.pravejxlab.focuspie.manager
+package com.pravejxlab.focuspie.data
 
+import android.os.Build
 import android.util.Log
 import com.google.android.gms.nearby.connection.AdvertisingOptions
 import com.google.android.gms.nearby.connection.ConnectionInfo
 import com.google.android.gms.nearby.connection.ConnectionLifecycleCallback
 import com.google.android.gms.nearby.connection.ConnectionResolution
-import com.google.android.gms.nearby.connection.ConnectionType
 import com.google.android.gms.nearby.connection.ConnectionsClient
 import com.google.android.gms.nearby.connection.ConnectionsStatusCodes
 import com.google.android.gms.nearby.connection.Payload
 import com.google.android.gms.nearby.connection.PayloadCallback
 import com.google.android.gms.nearby.connection.PayloadTransferUpdate
 import com.google.android.gms.nearby.connection.Strategy
+import com.pravejxlab.focuspie.domain.ConnectionState
+import com.pravejxlab.focuspie.domain.EndpointInfo
+import com.pravejxlab.focuspie.domain.PayloadState
+import com.pravejxlab.focuspie.domain.PayloadType
+import com.pravejxlab.focuspie.domain.Status
+import com.pravejxlab.focuspie.ui.common.toStudentsInfo
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.filterNot
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
-import kotlinx.serialization.decodeFromString
-import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.util.UUID
 import javax.inject.Inject
@@ -28,6 +34,7 @@ import javax.inject.Singleton
 class HostNearbyConnectionManager @Inject constructor(
     private val client: ConnectionsClient
 ) {
+    val scope = CoroutineScope(Dispatchers.Main)
     private val _connectedEndpoints = MutableStateFlow<Map<String, EndpointInfo>>(emptyMap())
     val connectedEndpoints = _connectedEndpoints.asStateFlow()
 
@@ -48,7 +55,7 @@ class HostNearbyConnectionManager @Inject constructor(
             val name = rawData.last()
 
             _connectedEndpoints.update { it + (uuid to EndpointInfo(endpointId, name, Status.Awaiting)) }
-            _connectionState.value = ConnectionState.Initiated(endpointId, info.endpointName, info.authenticationDigits)
+            _connectionState.value = ConnectionState.Initiated(endpointId, name, info.authenticationDigits)
         }
 
         override fun onConnectionResult(endpointId: String, resolution: ConnectionResolution) {
@@ -79,6 +86,7 @@ class HostNearbyConnectionManager @Inject constructor(
 
             val uuid = _connectedEndpoints.value.entries.find { it.value.endpointId == endpointId }?.key ?: return
             _connectedEndpoints.update { endpoints -> endpoints.filterNot { it.key == uuid } }
+            scope.launch { triggerDisconnected(endpointId) }
         }
     }
 
@@ -128,7 +136,7 @@ class HostNearbyConnectionManager @Inject constructor(
         client.acceptConnection(endpointId, payloadCallback).await()
     }
 
-    suspend fun broadcastStudyHasStarted() {
+    suspend fun triggerStudyHasStarted() {
         val endpoints = _connectedEndpoints.value.values.map { it.endpointId }
         if (endpoints.isEmpty()) return
 
@@ -144,7 +152,10 @@ class HostNearbyConnectionManager @Inject constructor(
         val endpoints = _connectedEndpoints.value.values.map { it.endpointId }
         if (endpoints.isEmpty()) return
 
-        val data = PayloadType.TriggerStartStudy(System.currentTimeMillis())
+        val data = PayloadType.TriggerStartStudy(
+            startTime = System.currentTimeMillis(),
+            students = _connectedEndpoints.value.values.toStudentsInfo()
+        )
         val jsonString = Json.encodeToString<PayloadType>(data)
         val payload = Payload.fromBytes(jsonString.toByteArray())
 
@@ -153,10 +164,11 @@ class HostNearbyConnectionManager @Inject constructor(
     }
 
     suspend fun triggerDisconnected(endpointId: String) {
-        val endpoints = _connectedEndpoints.value.values.map { it.endpointId }
+        val endpoints = _connectedEndpoints.value.values.map { it.endpointId } - endpointId
         if (endpoints.isEmpty()) return
 
-        val data = PayloadType.Disconnected(endpointId)
+        val endpointName = _connectedEndpoints.value.values.find { it.endpointId == endpointId }?.endpointName ?: "Unknown"
+        val data = PayloadType.Disconnected(endpointId, endpointName)
         val jsonString = Json.encodeToString<PayloadType>(data)
         val payload = Payload.fromBytes(jsonString.toByteArray())
 
@@ -164,15 +176,25 @@ class HostNearbyConnectionManager @Inject constructor(
         _payloadState.value = PayloadState.Sent(data)
     }
 
-    fun stopAdvertisement() {
-        client.stopAdvertising()
-        client.stopAllEndpoints()
+    suspend fun triggerDistracted(endpointName: String) {
+        val endpoints = _connectedEndpoints.value.values.map { it.endpointId }
+        if (endpoints.isEmpty()) return
+
+        val data = PayloadType.Distracted(endpointName)
+        val jsonString = Json.encodeToString<PayloadType>(data)
+        val payload = Payload.fromBytes(jsonString.toByteArray())
+
+        client.sendPayload(endpoints, payload).await()
+        _payloadState.value = PayloadState.Sent(data)
     }
+
+    fun stopAdvertisement() = client.stopAdvertising()
+    fun destroyConnection() = client.stopAllEndpoints()
 
     companion object {
         private val TAG = HostNearbyConnectionManager::class.simpleName
         private val uuid = UUID.randomUUID().toString()
-        private val deviceName = android.os.Build.MODEL.let { if (it.isNullOrBlank()) "Unknown" else it }
+        private val deviceName = Build.MODEL.let { if (it.isNullOrBlank()) "Unknown" else it }
         private const val SPLITTER = "|<..x|-->"
 
         private val hostData = "$uuid$SPLITTER$deviceName"

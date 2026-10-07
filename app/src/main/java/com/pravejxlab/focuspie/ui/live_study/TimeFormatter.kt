@@ -1,4 +1,4 @@
-package com.pravejxlab.focuspie.live_study
+package com.pravejxlab.focuspie.ui.live_study
 
 import java.util.Locale
 

@@ -1,11 +1,7 @@
-package com.pravejxlab.focuspie.manager
+package com.pravejxlab.focuspie.domain
 
+import com.pravejxlab.focuspie.ui.common.StudentInfo
 import kotlinx.serialization.Serializable
-
-sealed class EndpointState {
-    object Awaiting : EndpointState()
-    data class AvailableEndpoints(val endpoints: List<EndpointInfo>) : EndpointState()
-}
 
 data class EndpointInfo(
     val endpointId: String,
@@ -15,7 +11,7 @@ data class EndpointInfo(
 
 sealed class ConnectionState {
     object Awaiting : ConnectionState()
-    data class Initiated(val endpointId: String, val endpointName: String, val authDigits: String) : ConnectionState()
+    data class Initiated(val id: String, val name: String, val authDigits: String) : ConnectionState()
     object Connected : ConnectionState()
 }
 
@@ -31,16 +27,13 @@ sealed class PayloadType {
     object StartTimeBroadcast : PayloadType()
 
     @Serializable
-    data class TriggerStartStudy(val startTime: Long) : PayloadType()
+    data class TriggerStartStudy(val startTime: Long, val students: List<StudentInfo>) : PayloadType()
 
     @Serializable
     data class Distracted(val endpointName: String) : PayloadType()
 
     @Serializable
-    data class Disconnected(val endpointId: String) : PayloadType()
-
-    @Serializable
-    data class LiveNow(val endpointName: String) : PayloadType()
+    data class Disconnected(val endpointId: String, val endpointName: String) : PayloadType()
 }
 
 enum class Status {

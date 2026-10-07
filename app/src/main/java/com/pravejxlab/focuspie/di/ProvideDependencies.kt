@@ -1,4 +1,4 @@
-package com.pravejxlab.focuspie
+package com.pravejxlab.focuspie.di
 
 import android.content.Context
 import com.google.android.gms.nearby.Nearby

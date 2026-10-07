@@ -1,4 +1,4 @@
-package com.pravejxlab.focuspie.host_table
+package com.pravejxlab.focuspie.ui.host_table
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -37,12 +37,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.pravejxlab.focuspie.FocusPieRoute
 import com.pravejxlab.focuspie.R
-import com.pravejxlab.focuspie.home.google_sans_font
-import com.pravejxlab.focuspie.join_table.AcceptConnectionRequestPage
-import com.pravejxlab.focuspie.join_table.AdvertisementState
-import com.pravejxlab.focuspie.join_table.StudentInfo
-import com.pravejxlab.focuspie.manager.PayloadState
-import com.pravejxlab.focuspie.manager.PayloadType
+import com.pravejxlab.focuspie.ui.home.google_sans_font
+import com.pravejxlab.focuspie.ui.common.AcceptConnectionRequestPage
+import com.pravejxlab.focuspie.ui.common.StudentInfo
+import com.pravejxlab.focuspie.domain.ConnectionState
+import com.pravejxlab.focuspie.domain.PayloadState
+import com.pravejxlab.focuspie.domain.PayloadType
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,7 +50,7 @@ fun HostTableScreen(
     navController: NavController,
     viewModel: HostTableViewModel = hiltViewModel()
 ) {
-    val advertisementState by viewModel.advertisementState.collectAsStateWithLifecycle()
+    val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
     val payloadState by viewModel.payloadState.collectAsStateWithLifecycle()
 
     LaunchedEffect(payloadState) {
@@ -63,16 +63,16 @@ fun HostTableScreen(
         }
     }
 
-    if (advertisementState is AdvertisementState.Initiated) {
+    if (connectionState is ConnectionState.Initiated) {
         ModalBottomSheet(
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            onDismissRequest = { viewModel.denyConnection((advertisementState as AdvertisementState.Initiated).id) }
+            onDismissRequest = { viewModel.denyConnection((connectionState as ConnectionState.Initiated).id) }
         ) {
             AcceptConnectionRequestPage(
-                tableName = (advertisementState as AdvertisementState.Initiated).name,
-                authDigits = (advertisementState as AdvertisementState.Initiated).authDigits,
-                denyConnection = { viewModel.denyConnection((advertisementState as AdvertisementState.Initiated).id) },
-                acceptConnection = { viewModel.acceptConnection((advertisementState as AdvertisementState.Initiated).id) }
+                tableName = (connectionState as ConnectionState.Initiated).name,
+                authDigits = (connectionState as ConnectionState.Initiated).authDigits,
+                denyConnection = { viewModel.denyConnection((connectionState as ConnectionState.Initiated).id) },
+                acceptConnection = { viewModel.acceptConnection((connectionState as ConnectionState.Initiated).id) }
             )
         }
     }
@@ -80,7 +80,7 @@ fun HostTableScreen(
     Scaffold { innerPadding ->
         HostTablePage(
             innerPadding = innerPadding,
-            connectedStudents = viewModel.connectedStudents,
+            connectedStudents = viewModel.connectedStudents.toList(),
             onStartStudyButtonClicked = { viewModel.startStudy() }
         )
     }

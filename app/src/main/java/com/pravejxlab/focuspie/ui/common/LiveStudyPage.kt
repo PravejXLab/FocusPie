@@ -1,4 +1,4 @@
-package com.pravejxlab.focuspie.live_study
+package com.pravejxlab.focuspie.ui.common
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -26,8 +26,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.pravejxlab.focuspie.home.google_sans_font
-import com.pravejxlab.focuspie.join_table.StudentInfo
+import com.pravejxlab.focuspie.ui.home.google_sans_font
+import com.pravejxlab.focuspie.ui.live_study.toMMSSTime
 
 @Preview(showBackground = true)
 @Composable
@@ -45,7 +45,7 @@ fun LiveStudyPage(
         Spacer(Modifier.height(16.dp))
 
         LazyVerticalGrid(
-            columns = GridCells.Adaptive(80.dp),
+            columns = GridCells.Adaptive(100.dp),
             modifier = Modifier.padding(8.dp)
         ) {
             items(studyingStudents) { student ->
@@ -99,6 +99,7 @@ fun StudyingStudentSegment(studentInfo: StudentInfo) {
 
         Text(
             text = studentInfo.name,
+            style = MaterialTheme.typography.titleSmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )

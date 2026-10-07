@@ -1,6 +1,5 @@
-package com.pravejxlab.focuspie.join_table
+package com.pravejxlab.focuspie.ui.join_table
 
-import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,15 +29,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.pravejxlab.focuspie.FocusPieRoute
 import com.pravejxlab.focuspie.R
-import com.pravejxlab.focuspie.home.google_sans_font
-import com.pravejxlab.focuspie.manager.PayloadState
-import com.pravejxlab.focuspie.manager.PayloadType
+import com.pravejxlab.focuspie.ui.home.google_sans_font
+import com.pravejxlab.focuspie.domain.ConnectionState
+import com.pravejxlab.focuspie.domain.PayloadState
+import com.pravejxlab.focuspie.domain.PayloadType
+import com.pravejxlab.focuspie.ui.common.AcceptConnectionRequestPage
+import com.pravejxlab.focuspie.ui.common.TableInfo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,29 +47,31 @@ fun JoinTableScreen(
     navController: NavController,
     viewModel: JoinTableViewModel = hiltViewModel()
 ) {
-    val advertisementState by viewModel.advertisementState.collectAsStateWithLifecycle()
+    val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
     val payloadState by viewModel.payloadState.collectAsStateWithLifecycle()
 
     LaunchedEffect(payloadState) {
         if (payloadState is PayloadState.Received) {
             val payloadType = (payloadState as PayloadState.Received).payloadType
 
-            if (payloadType is PayloadType.StartTimeBroadcast) {
+            val canNavigate = payloadType is PayloadType.StartTimeBroadcast || payloadType is PayloadType.TriggerStartStudy
+            if (canNavigate) {
                 navController.navigate(FocusPieRoute.StudentLiveStudy)
+                viewModel.stopDiscovery()
             }
         }
     }
 
-    if (advertisementState is AdvertisementState.Initiated) {
+    if (connectionState is ConnectionState.Initiated) {
         ModalBottomSheet(
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            onDismissRequest = { viewModel.denyConnection((advertisementState as AdvertisementState.Initiated).id) }
+            onDismissRequest = { viewModel.denyConnection((connectionState as ConnectionState.Initiated).id) }
         ) {
             AcceptConnectionRequestPage(
-                tableName = (advertisementState as AdvertisementState.Initiated).name,
-                authDigits = (advertisementState as AdvertisementState.Initiated).authDigits,
-                denyConnection = { viewModel.denyConnection((advertisementState as AdvertisementState.Initiated).id) },
-                acceptConnection = { viewModel.acceptConnection((advertisementState as AdvertisementState.Initiated).id) }
+                tableName = (connectionState as ConnectionState.Initiated).name,
+                authDigits = (connectionState as ConnectionState.Initiated).authDigits,
+                denyConnection = { viewModel.denyConnection((connectionState as ConnectionState.Initiated).id) },
+                acceptConnection = { viewModel.acceptConnection((connectionState as ConnectionState.Initiated).id) }
             )
         }
     }
