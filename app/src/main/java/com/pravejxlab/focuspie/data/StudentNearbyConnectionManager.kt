@@ -186,7 +186,12 @@ class StudentNearbyConnectionManager @Inject constructor(
     }
 
     fun stopDiscovery() = client.stopDiscovery()
-    fun destroyConnection() = client.stopAllEndpoints()
+    fun destroyConnection() {
+        client.stopAllEndpoints()
+        _availableEndpoints.update { emptyMap() }
+        _connectionState.update { ConnectionState.Awaiting }
+        _payloadState.update { PayloadState.Awaiting }
+    }
 
 
     companion object {

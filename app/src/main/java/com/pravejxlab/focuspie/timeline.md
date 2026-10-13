@@ -21,6 +21,8 @@
 8. No database, no persistent, no fallback, if time available, enough good UI.
 9. Let's commit up to here and start the next sprint.
 
+# Business logic part.
+
 ### First 6 hours sprint target --
 1. Specify all required permissions in manifest file.
 2. Assume all permission are granted and permit manually from setting, also enable BT, Wi-Fi and Location adapters manually.
@@ -35,10 +37,19 @@
 ### Third 6 hours sprint target -- 
 1. Start the timer, it should decrease each second and should be same logically. 
 2. if any student leaves or disconnect, timer will reset to 0 hour immediately.
-3. Rewrite NearbyConnectionManager, it should be separate for logical and separation clarity.
+3. Rewrite NearbyConnectionManager, it should be separate for logical and separation clarity. 
 
-### Third 6 hours sprint target --
+### Fourth 6 hours sprint target --
 1. Handle disconnect and distracted resets.
 2. Show final congratulation or sorry page.
 3. Hard code 1 hour on home screen.
+
+> *Completed in 24 hours.*
+
+# UI/UX part
+
+### First 6 hours sprint
+1. Ask for required permissions on advertise or discovery page.
+2. Ask to enable required adapters after it.
+3. Redesign all pages to look beautiful yet profession.
 <br>

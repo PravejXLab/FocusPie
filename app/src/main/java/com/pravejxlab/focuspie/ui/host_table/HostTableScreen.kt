@@ -1,5 +1,8 @@
 package com.pravejxlab.focuspie.ui.host_table
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,21 +31,29 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.pravejxlab.focuspie.FocusPieRoute
-import com.pravejxlab.focuspie.R
-import com.pravejxlab.focuspie.ui.home.google_sans_font
 import com.pravejxlab.focuspie.ui.common.AcceptConnectionRequestPage
 import com.pravejxlab.focuspie.ui.common.StudentInfo
 import com.pravejxlab.focuspie.domain.ConnectionState
 import com.pravejxlab.focuspie.domain.PayloadState
 import com.pravejxlab.focuspie.domain.PayloadType
+import com.pravejxlab.focuspie.ui.common.getRequiredPermissions
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.*
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
+import com.pravejxlab.focuspie.R
+import com.pravejxlab.focuspie.ui.home.google_sans_font
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,6 +61,7 @@ fun HostTableScreen(
     navController: NavController,
     viewModel: HostTableViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val connectionState by viewModel.connectionState.collectAsStateWithLifecycle()
     val payloadState by viewModel.payloadState.collectAsStateWithLifecycle()
 
@@ -61,6 +73,21 @@ fun HostTableScreen(
                 navController.navigate(FocusPieRoute.HostLiveStudy)
             }
         }
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { result ->
+        if (result.values.all { true }) {
+            viewModel.startAdvertising()
+        } else {
+            navController.popBackStack()
+            Toast.makeText(context, "Please allow all required permissions to continue", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        permissionLauncher.launch(getRequiredPermissions())
     }
 
     if (connectionState is ConnectionState.Initiated) {
@@ -96,36 +123,52 @@ fun HostTablePage(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .padding(innerPadding)
     ) {
-        LazyColumn(
+        // Page Header
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 24.dp)
+        ) {
+            Text(
+                text = "Host a Table",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    // fontFamily = google_sans_font
+                ),
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Your table is open and visible to nearby students.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+
+        // Main Content Area
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
         ) {
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = colorResource(R.color.extra_light_blue)
-                    )
+            if (connectedStudents.isEmpty()) {
+                BroadcastingEmptyState()
+            } else {
+                LazyColumn(
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Text(
-                        text = "Broadcasting has started, looking for students to join...",
-                        fontFamily = google_sans_font,
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(32.dp)
-                    )
+                    items(connectedStudents, key = { it.id }) { student ->
+                        StudentItemCard(student = student)
+                    }
                 }
-            }
-
-            items(connectedStudents, key = { it.id }) { student ->
-                AvailableStudentsSegment(student)
             }
         }
 
+        // Pinned Bottom Button
         if (connectedStudents.isNotEmpty()) {
             Button(
                 onClick = onStartStudyButtonClicked,
@@ -148,33 +191,120 @@ fun HostTablePage(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AvailableStudentsSegment(
+fun StudentItemCard(
     student: StudentInfo
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)
-            .clip(RoundedCornerShape(100))
-            .background(color = colorResource(R.color.extra_light_blue))
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 32.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Avatar Icon
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.secondaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.person),
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSecondaryContainer
+                )
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            // Student Name
             Text(
                 text = student.name,
-                fontFamily = google_sans_font
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
             )
 
-            Text(
-                text = "Connected",
-                fontFamily = google_sans_font
+            // Connected Status Badge with Icon
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = MaterialTheme.colorScheme.primaryContainer
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.check_circle),
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = "CONNECTED",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun BroadcastingEmptyState() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // Pulsing or static broadcast icon
+        Box(
+            modifier = Modifier
+                .size(72.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(R.drawable.wifi_tethring),
+                contentDescription = "Broadcasting",
+                modifier = Modifier.size(36.dp),
+                tint = MaterialTheme.colorScheme.primary
             )
         }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Broadcasting...",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Waiting for students to discover and join your table.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
     }
 }

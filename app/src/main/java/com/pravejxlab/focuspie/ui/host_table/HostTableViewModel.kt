@@ -34,10 +34,6 @@ class HostTableViewModel @Inject constructor(
 
     val payloadState = repository.payloadState
 
-    init {
-        startAdvertising()
-    }
-
     fun startAdvertising() = viewModelScope.launch {
         repository.startAdvertising()
     }

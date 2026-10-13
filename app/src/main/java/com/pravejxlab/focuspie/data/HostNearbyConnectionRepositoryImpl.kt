@@ -109,14 +109,14 @@ class HostNearbyConnectionRepositoryImpl @Inject constructor(
     }
 
     override suspend fun triggerDistracted(name: String) {
-        Log.i(TAG, "triggerDisconnected: Triggering distracted event to all devices...")
+        Log.i(TAG, "triggerDistracted: Triggering distracted event to all devices...")
 
         try {
             manager.triggerDistracted(name)
 
-            Log.i(TAG, "triggerDisconnected: Trigger disconnected sent to all devices")
+            Log.i(TAG, "triggerDistracted: Trigger distracted event sent successfully to all devices.")
         } catch (e: Exception) {
-            Log.e(TAG, "triggerDisconnected: ${e.message}", e)
+            Log.e(TAG, "triggerDistracted: ${e.message}", e)
         }
     }
 
@@ -134,7 +134,7 @@ class HostNearbyConnectionRepositoryImpl @Inject constructor(
         try {
             manager.destroyConnection()
 
-            Log.i(TAG, "destroyConnection: Connection destroy, all connected endpoints are thrown away.")
+            Log.i(TAG, "destroyConnection: Connection destroyed, all connected endpoints are thrown away.")
         } catch (e: Exception) {
             Log.e(TAG, "destroyConnection: Failed to destroy connection", e)
         }

@@ -189,7 +189,12 @@ class HostNearbyConnectionManager @Inject constructor(
     }
 
     fun stopAdvertisement() = client.stopAdvertising()
-    fun destroyConnection() = client.stopAllEndpoints()
+    fun destroyConnection() {
+        client.stopAllEndpoints()
+        _connectedEndpoints.update { emptyMap() }
+        _connectionState.update { ConnectionState.Awaiting }
+        _payloadState.update { PayloadState.Awaiting }
+    }
 
     companion object {
         private val TAG = HostNearbyConnectionManager::class.simpleName

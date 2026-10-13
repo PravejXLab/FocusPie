@@ -31,10 +31,6 @@ class JoinTableViewModel @Inject constructor(
 
     val connectionState = repository.connectionState
 
-    init {
-        startDiscovery()
-    }
-
     val payloadState = repository.payloadState
 
     fun startDiscovery() = viewModelScope.launch {
