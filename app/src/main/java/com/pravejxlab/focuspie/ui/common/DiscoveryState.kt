@@ -1,4 +1,4 @@
-package com.pravejxlab.focuspie.join_table
+package com.pravejxlab.focuspie.ui.common
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,32 +28,30 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import com.pravejxlab.focuspie.R
 
-import com.pravejxlab.focuspie.home.google_sans_font
-import com.pravejxlab.focuspie.manager.EndpointInfo
+import com.pravejxlab.focuspie.ui.home.google_sans_font
+import com.pravejxlab.focuspie.domain.EndpointInfo
+import com.pravejxlab.focuspie.domain.Status
+import kotlinx.serialization.Serializable
 
-sealed class DiscoveryState {
-    object Awaiting : DiscoveryState()
-    data class AvailableTables(val tables: List<TableInfo>) : DiscoveryState()
-}
-
-sealed class AdvertisementState {
-    object Awaiting : DiscoveryState()
-    data class Initiated(val id: String, val name: String, val authDigits: String) : DiscoveryState()
-    data class Connected(val connectedStudents: List<StudentInfo>) : DiscoveryState()
-}
-
+@Serializable
 data class StudentInfo(
     val id: String,
     val name: String
 )
 
-fun List<EndpointInfo>.toTablesInfo() = map { TableInfo(it.endpointId, it.endpointName, "Connected") }
-fun List<EndpointInfo>.toStudentsInfo() = map { StudentInfo(it.endpointId, it.endpointName) }
+fun Collection<EndpointInfo>.toTablesInfo() = map {
+    TableInfo(
+        id = it.endpointId,
+        name = it.endpointName,
+        status = if (it.status == Status.None || it.status == Status.Awaiting) "" else it.status.name
+    )
+}
+fun Collection<EndpointInfo>.toStudentsInfo() = map { StudentInfo(it.endpointId, it.endpointName) }
 
 data class TableInfo(
     val id: String,
     val name: String,
-    val status: String
+    val status: String = Status.Awaiting.name
 )
 
 

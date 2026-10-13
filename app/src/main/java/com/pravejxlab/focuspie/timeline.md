@@ -7,7 +7,7 @@
 4. Commit to GitHub, do a small test on mobile.
 
 ### Lets setup repository.
-1. Create a GitHub project ```FocusPie```, and keep repository open source ✅.
+1. Create a GitHub project ```FocusPie```, and keep repository open source.
 2. Make the project roadmap here and at last push to GitHub as first commit.
 
 ### Full picture of app --
@@ -21,8 +21,35 @@
 8. No database, no persistent, no fallback, if time available, enough good UI.
 9. Let's commit up to here and start the next sprint.
 
-### First 2 hours sprint target --
+# Business logic part.
+
+### First 6 hours sprint target --
 1. Specify all required permissions in manifest file.
-2. Assume all permission are granted and permit manually from setting, also enable BT and Wi-Fi adapters manually.
+2. Assume all permission are granted and permit manually from setting, also enable BT, Wi-Fi and Location adapters manually.
 3. When host will click ```Host a table```, the host device will start broadcasting immediately.
 4. When user will click ```Join a table```, the user device will search for the table.
+
+### Second 6 hours sprint target --
+1. Improve the status, it is always connected, correct it to real status. Make sure to have payload setup as well.
+2. Start the timer button in host screen, clicking will move to study page.
+3. Timer is hardcoded to 1 hour this time, startTime will be stored in host viewModel, and shared to others via payload.
+
+### Third 6 hours sprint target -- 
+1. Start the timer, it should decrease each second and should be same logically. 
+2. if any student leaves or disconnect, timer will reset to 0 hour immediately.
+3. Rewrite NearbyConnectionManager, it should be separate for logical and separation clarity. 
+
+### Fourth 6 hours sprint target --
+1. Handle disconnect and distracted resets.
+2. Show final congratulation or sorry page.
+3. Hard code 1 hour on home screen.
+
+> *Completed in 24 hours.*
+
+# UI/UX part
+
+### First 6 hours sprint
+1. Ask for required permissions on advertise or discovery page.
+2. Ask to enable required adapters after it.
+3. Redesign all pages to look beautiful yet profession.
+<br>

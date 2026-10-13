@@ -12,4 +12,13 @@ sealed class FocusPieRoute {
 
     @Serializable
     object JoinTable : FocusPieRoute()
+
+    @Serializable
+    object HostLiveStudy : FocusPieRoute()
+
+    @Serializable
+    object StudentLiveStudy : FocusPieRoute()
+
+    @Serializable
+    data class Appreciation(val timeLeft: Long) : FocusPieRoute()
 }

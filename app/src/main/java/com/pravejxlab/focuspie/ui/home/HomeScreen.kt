@@ -1,4 +1,4 @@
-package com.pravejxlab.focuspie.home
+package com.pravejxlab.focuspie.ui.home
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
@@ -86,7 +86,7 @@ private fun HomePage(
             .padding(innerPadding)
             .padding(16.dp)
     ) {
-        item { TotalStudyHero("04:34:19") }
+        item { TotalStudyHero("01:00:00") }
         item { Spacer(Modifier.height(32.dp)) }
 
         item {
@@ -124,7 +124,7 @@ fun TotalStudyHero(time: String) {
             modifier = Modifier.padding(bottom = 16.dp)
         ) {
             Text(
-                text = "Total Focus Today",
+                text = "Focus session duration",
                 fontFamily = google_sans_font,
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
